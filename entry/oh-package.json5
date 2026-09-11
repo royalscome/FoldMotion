@@ -1,0 +1,9 @@
+{
+  "name": "fold-motion-demo",
+  "version": "1.0.0",
+  "description": "FoldMotion sample application",
+  "license": "Unlicense",
+  "dependencies": {
+    "fold-motion": "file:../fold_motion"
+  }
+}

@@ -1,0 +1,28 @@
+# Dependencies and generated build output
+**/node_modules/
+**/oh_modules/
+**/.hvigor/
+**/.test/
+**/build/
+**/BuildProfile.ets
+**/.preview/
+dist/
+__pycache__/
+*.pyc
+*.log
+
+# Local IDE and machine settings
+.idea/
+local.properties
+.DS_Store
+
+# Signing material and private environment values
+signing/
+*.p12
+*.pfx
+*.cer
+*.pem
+*.key
+*.p7b
+.env
+.env.*

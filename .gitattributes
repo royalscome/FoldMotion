@@ -1,0 +1,6 @@
+* text=auto
+*.ets text eol=lf
+*.cjs text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.json5 text eol=lf

@@ -1,0 +1,16 @@
+{
+  "name": "fold-motion-dev",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Unlicense",
+  "description": "Development checks for FoldMotion, an ArkUI fold-motion HAR.",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
