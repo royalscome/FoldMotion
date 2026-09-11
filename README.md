@@ -73,7 +73,7 @@ python3 scripts/harmony.py demo
 python3 scripts/harmony.py package
 ```
 
-打包产物为 `dist/fold-motion-1.0.0.har` 和 `dist/SHA256SUMS`。接入时可将 HAR 重命名为 `fold_motion.har`。原始构建产物位于 `fold_motion/build/default/outputs/default/fold_motion.har`。
+打包产物为 `dist/fold-motion-1.0.1.har` 和 `dist/SHA256SUMS`。接入时可将 HAR 重命名为 `fold_motion.har`。原始构建产物位于 `fold_motion/build/default/outputs/default/fold_motion.har`。
 
 ## 测试
 

@@ -121,7 +121,7 @@ python3 scripts/harmony.py install
 python3 scripts/harmony.py package
 ```
 
-产物为 `dist/fold-motion-1.0.0.har` 和 `dist/SHA256SUMS`。示例应用与构建脚本位于源码工程中。
+产物为 `dist/fold-motion-1.0.1.har` 和 `dist/SHA256SUMS`。示例应用与构建脚本位于源码工程中。
 
 ## 许可证
 

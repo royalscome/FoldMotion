@@ -60,6 +60,7 @@ def verify_archive():
         required = ['Index.d.ets', 'ets/modules.abc', 'LICENSE', 'README.md',
                     'src/main/ets/FoldMotion.d.ets',
                     'src/main/ets/FoldMotionController.d.ets',
+                    'src/main/ets/FoldMotionDirectionModel.d.ets',
                     'src/main/ets/FoldMotionModel.d.ets', 'oh-package.json5']
         for name in required:
             if f'package/{name}' not in names:
@@ -67,6 +68,8 @@ def verify_archive():
         license_text = archive.extractfile('package/LICENSE').read()
         if license_text != (ROOT / 'LICENSE').read_bytes():
             raise RuntimeError('HAR license differs from root LICENSE')
+        if archive.extractfile('package/README.md').read() != (ROOT / 'fold_motion/README.md').read_bytes():
+            raise RuntimeError('HAR README differs from source README')
         package = json.loads(archive.extractfile('package/oh-package.json5').read())
         for key in ['name', 'version', 'license']:
             if package.get(key) != metadata[key]:

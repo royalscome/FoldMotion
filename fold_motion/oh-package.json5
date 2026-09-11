@@ -1,6 +1,6 @@
 {
   "name": "fold-motion",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Angle-driven fold motion for ArkUI pages, cards and custom effects.",
   "main": "Index.ets",
   "license": "Unlicense",

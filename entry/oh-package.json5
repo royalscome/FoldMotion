@@ -1,6 +1,6 @@
 {
   "name": "fold-motion-demo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "FoldMotion sample application",
   "license": "Unlicense",
   "dependencies": {

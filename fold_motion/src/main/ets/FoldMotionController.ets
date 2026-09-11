@@ -32,19 +32,12 @@ export class FoldMotionController {
   private direction: GradientDirection = GradientDirection.Right;
   private lastRadius: number = 0;
   private lastDirection: GradientDirection = GradientDirection.Right;
-  private lastDiagnosticAt: number = 0;
-  private lastDisplayDiagnostic: string = '';
   private readonly anglesChanged = (angles: number[]): void => {
     if (!this.enabled || !this.foreground || this.reducedMotion) { return; }
     const now: number = this.now();
     const previousHinge: number = this.motion.hinge;
     if (!this.motion.accept(angles, now)) { return; }
     if (previousHinge !== this.motion.hinge) { this.updateDirection(); }
-    if (now - this.lastDiagnosticAt > 750) {
-      this.lastDiagnosticAt = now;
-      hilog.info(0xD004201, 'FoldMotionModel', 'angles=%{public}s hinge=%{public}d',
-        angles.map((angle: number): number => Math.round(angle)).join(','), this.motion.hinge);
-    }
     this.requestFrame();
   };
   private readonly modeChanged = (_mode: display.FoldDisplayMode): void => {
@@ -67,7 +60,6 @@ export class FoldMotionController {
     // Reattachment must release callbacks and pending frames from the old host.
     if (this.context !== undefined) { this.close(); }
     this.orientation.reset();
-    this.lastDisplayDiagnostic = '';
     this.context = context;
     this.enabled = enabled;
     this.foreground = true;
@@ -113,7 +105,6 @@ export class FoldMotionController {
       display.on('foldDisplayModeChange', this.modeChanged); this.observingDisplayMode = true;
       display.on('change', this.displayChanged); this.observingDisplay = true;
       this.updateDirection();
-      hilog.info(0xD004201, 'FoldMotionModel', 'angle listener ready');
     } catch (_error) {
       this.stopObserving();
       hilog.warn(0xD004201, 'FoldMotionModel', 'angle listener unavailable');
@@ -157,11 +148,6 @@ export class FoldMotionController {
       const directions: GradientDirection[] = [GradientDirection.Right, GradientDirection.Bottom,
         GradientDirection.Left, GradientDirection.Top];
       this.direction = directions[turn];
-      const diagnostic: string = `${screen.id}:${mode}:${screen.width}x${screen.height}:${screen.rotation}:${turn}`;
-      if (diagnostic !== this.lastDisplayDiagnostic) {
-        this.lastDisplayDiagnostic = diagnostic;
-        hilog.info(0xD004201, 'FoldMotionModel', 'direction display:mode:size:rotation:turn=%{public}s', diagnostic);
-      }
     } catch (_error) {}
   }
 

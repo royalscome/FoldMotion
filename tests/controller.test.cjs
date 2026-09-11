@@ -32,7 +32,7 @@ const mocks = {
     offAnimationReduceStateChange: cb => { assert.ok(accessibilityCallbacks.delete(cb)); }
   } },
   '@kit.BasicServicesKit': { systemDateTime: { TimeType: { ACTIVE: 0 }, getUptime: () => now } },
-  '@kit.PerformanceAnalysisKit': { hilog: { info() {}, warn() {} } }
+  '@kit.PerformanceAnalysisKit': { hilog: { warn() {} } }
 };
 const originalLoad = Module._load;
 Module._load = function(name, ...args) { return mocks[name] ?? originalLoad.call(this, name, ...args); };
