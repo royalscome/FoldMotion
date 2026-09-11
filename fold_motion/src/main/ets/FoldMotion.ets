@@ -8,7 +8,7 @@ export struct FoldMotion {
   @Prop @Watch('synchronize') effectEnabled: boolean = true;
   @Prop @Watch('synchronize') maxBlurRadius: number = 28;
   @Prop blurDirection: GradientDirection | undefined = undefined;
-  @Prop fractionStops: FractionStop[] = [[0, 0], [0, 0.28], [0.28, 0.48], [0.95, 0.72], [1, 1]];
+  @Prop fractionStops: FractionStop[] = [[1, 0], [0.95, 0.28], [0.28, 0.52], [0, 0.72], [0, 1]];
   @State private radius: number = 0;
   @State private physicalDirection: GradientDirection = GradientDirection.Right;
   private visible: boolean = true;

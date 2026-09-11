@@ -23,17 +23,51 @@ interface DirectionBasis {
   axis: number | undefined;
 }
 
+interface PanelRole {
+  key: string;
+  cover: boolean;
+}
+
 /** Keep rotations relative to the native coordinate system of each panel. */
 export class FoldMotionDirectionModel {
   private bases: DirectionBasis[] = [];
+  private panels: PanelRole[] = [];
   private turn: number = 0;
+  private cover: boolean = false;
+  private visualTurn: number = 0;
 
-  reset(): void { this.bases = []; this.turn = 0; }
+  reset(): void {
+    this.bases = []; this.panels = []; this.turn = this.visualTurn = 0; this.cover = false;
+  }
+
+  resolveForDisplay(frame: FoldMotionDisplayFrame, crease: FoldMotionCrease | undefined): number {
+    if (!this.validFrame(frame)) { return this.visualTurn; }
+    const turn: number = this.resolve(frame, crease);
+    // Panel identity must not change when its rotation or mode notification
+    // arrives before its new bounds. Keep the role with the physical size.
+    const key: string = `${frame.id}:${Math.min(frame.width, frame.height)}x${Math.max(frame.width, frame.height)}`;
+    const panel: PanelRole | undefined = this.panels.find((item: PanelRole): boolean => item.key === key);
+    if (panel !== undefined) {
+      this.cover = panel.cover;
+    } else {
+      const rotated: boolean = frame.rotation % 2 !== 0;
+      const axis: number | undefined = this.creaseAxis(frame.id,
+        rotated ? frame.height : frame.width, rotated ? frame.width : frame.height, crease);
+      // MAIN (2) is the cover on book-style devices, but the inner panel on
+      // clamshells. A crease belonging to the active panel identifies the latter.
+      // SUB (3) is the clamshell cover. Unknown/transitional data keeps its role.
+      if (frame.mode === 3 || axis !== undefined || frame.mode === 2) {
+        this.cover = frame.mode === 3 || (frame.mode === 2 && axis === undefined);
+        this.panels.push({ key, cover: this.cover });
+        if (this.panels.length > 16) { this.panels.shift(); }
+      }
+    }
+    this.visualTurn = (turn + (this.cover ? 2 : 0)) % 4;
+    return this.visualTurn;
+  }
 
   resolve(frame: FoldMotionDisplayFrame, crease: FoldMotionCrease | undefined): number {
-    if (!Number.isFinite(frame.width) || !Number.isFinite(frame.height) ||
-      frame.width <= 0 || frame.height <= 0 || !Number.isInteger(frame.rotation) ||
-      frame.rotation < 0 || frame.rotation > 3) { return this.turn; }
+    if (!this.validFrame(frame)) { return this.turn; }
     const rotated: boolean = frame.rotation % 2 !== 0;
     const width: number = rotated ? frame.height : frame.width;
     const height: number = rotated ? frame.width : frame.height;
@@ -59,6 +93,12 @@ export class FoldMotionDirectionModel {
       if (axis !== undefined) { basis.axis = axis; }
     }
     return this.turn;
+  }
+
+  private validFrame(frame: FoldMotionDisplayFrame): boolean {
+    return Number.isFinite(frame.width) && Number.isFinite(frame.height) &&
+      frame.width > 0 && frame.height > 0 && Number.isInteger(frame.rotation) &&
+      frame.rotation >= 0 && frame.rotation <= 3;
   }
 
   private creaseAxis(id: number, width: number, height: number,

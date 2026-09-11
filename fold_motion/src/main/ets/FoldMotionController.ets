@@ -152,7 +152,7 @@ export class FoldMotionController {
       const physicalCrease: FoldMotionCrease | undefined = crease !== undefined && region !== undefined ? {
         displayId: region.displayId, left: crease.left, top: crease.top, width: crease.width, height: crease.height
       } : undefined;
-      const turn: number = this.orientation.resolve({ id: screen.id, mode, width: screen.width,
+      const turn: number = this.orientation.resolveForDisplay({ id: screen.id, mode, width: screen.width,
         height: screen.height, rotation: screen.rotation }, physicalCrease);
       const directions: GradientDirection[] = [GradientDirection.Right, GradientDirection.Bottom,
         GradientDirection.Left, GradientDirection.Top];

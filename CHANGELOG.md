@@ -5,8 +5,8 @@
 - Initial release of the FoldMotion HarmonyOS HAR, with no third-party runtime dependencies.
 - Provide a content-sized ArkUI component for pages and individual cards.
 - Drive directional blur from physical hinge angles, following crease orientation and display rotation.
-- Preserve the gradient direction during inner/cover display handoffs, including staggered display notifications.
-- Apply the default blur from the right edge toward the left, keeping the opposite side clear.
+- Keep the gradient axis stable during inner/cover display handoffs, including staggered display notifications.
+- Keep the original left-edge blur on the inner display and reverse it only on the cover display.
 - Preserve the effect while the hinge is stationary; stop frame scheduling after settling.
 - Expose a controller and platform-independent model for custom effects.
 - Handle application lifecycle, reduced motion, visibility and independent instances.

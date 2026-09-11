@@ -11,6 +11,48 @@ function innerFrame(): FoldMotionDisplayFrame {
 
 export default function foldMotionDirectionModelTest(): void {
   describe('FoldMotionDirectionModel', (): void => {
+    it('uses the original inner edge and the reversed cover edge through repeated handoffs', 0, (): void => {
+      const model = new FoldMotionDirectionModel();
+      const frame = innerFrame();
+      expect(model.resolveForDisplay(frame, innerCrease())).assertEqual(0);
+      frame.mode = 2; frame.width = 1264; frame.height = 1848; frame.rotation = 0;
+      expect(model.resolveForDisplay(frame, innerCrease())).assertEqual(2);
+      const orders: number[][] = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+      orders.forEach((order: number[]): void => {
+        order.forEach((field: number): void => {
+          if (field === 0) { frame.rotation = 3; }
+          if (field === 1) { frame.width = 2584; frame.height = 1828; }
+          if (field === 2) { frame.mode = 1; }
+          expect(model.resolveForDisplay(frame, innerCrease())).assertEqual(frame.width === 2584 ? 0 : 2);
+        });
+        order.forEach((field: number): void => {
+          if (field === 0) { frame.rotation = 0; }
+          if (field === 1) { frame.width = 1264; frame.height = 1848; }
+          if (field === 2) { frame.mode = 2; }
+          expect(model.resolveForDisplay(frame, innerCrease())).assertEqual(frame.width === 1264 ? 2 : 0);
+        });
+      });
+    });
+
+    it('starts on the cover with its reversed edge and restores the inner edge after opening', 0, (): void => {
+      const model = new FoldMotionDirectionModel();
+      expect(model.resolveForDisplay({ id: 0, mode: 2, rotation: 0, width: 1264, height: 1848 }, innerCrease())).assertEqual(2);
+      expect(model.resolveForDisplay({ id: 0, mode: 2, rotation: 1, width: 1848, height: 1264 }, innerCrease())).assertEqual(3);
+      expect(model.resolveForDisplay({ id: 0, mode: 2, rotation: 0, width: 1264, height: 1848 }, innerCrease())).assertEqual(2);
+      expect(model.resolveForDisplay({ id: 0, mode: 1, rotation: NaN, width: 0, height: 0 }, undefined)).assertEqual(2);
+      expect(model.resolveForDisplay(innerFrame(), innerCrease())).assertEqual(0);
+      model.reset();
+      expect(model.resolveForDisplay(innerFrame(), innerCrease())).assertEqual(0);
+    });
+
+    it('does not reverse a clamshell inner MAIN panel with a live crease', 0, (): void => {
+      const model = new FoldMotionDirectionModel();
+      expect(model.resolveForDisplay({ id: 0, mode: 2, rotation: 0, width: 1200, height: 2400 },
+        { displayId: 0, left: 0, top: 1190, width: 1200, height: 20 })).assertEqual(1);
+      expect(model.resolveForDisplay({ id: 5, mode: 3, rotation: 0, width: 600, height: 800 }, undefined)).assertEqual(3);
+      expect(model.resolveForDisplay({ id: 0, mode: 2, rotation: 0, width: 1200, height: 2400 }, undefined)).assertEqual(1);
+    });
+
     it('keeps every ordering of rotation, size and mode notifications continuous', 0, (): void => {
       const orders: number[][] = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
       orders.forEach((closing: number[]): void => {

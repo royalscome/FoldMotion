@@ -108,7 +108,7 @@ test('controller lifecycle, paused motion and independent scopes', () => {
   assert.equal(listeners.size, 0); assert.equal(applicationCallbacks.size, 0); assert.equal(accessibilityCallbacks.size, 0);
 });
 
-test('inner and cover screens keep the same gradient through staggered display events', () => {
+test('inner and cover use opposite blur edges without quarter-turns during handoff', () => {
   screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 };
   creaseRegion = { displayId: 0, creaseRects: [{ left: 0, top: 1194, width: 1828, height: 196 }] };
   displayMode = 1;
@@ -123,21 +123,21 @@ test('inner and cover screens keep the same gradient through staggered display e
   screenOverride = { id: 0, rotation: 0, width: 1264, height: 1848 };
   displayMode = 2;
   event('foldDisplayModeChange', 2); event('change', 0); tick();
-  assert.equal(values.at(-1).direction, GradientDirection.Right, 'inner crease coordinates must not rotate the cover effect');
+  assert.equal(values.at(-1).direction, GradientDirection.Left, 'only the cover reverses the blur edge');
   assert.equal(values.at(-1).radius, held);
   // An ordinary rotation on the cover still changes the visual direction.
   screenOverride = { id: 0, rotation: 1, width: 1848, height: 1264 };
   event('change', 0); tick();
-  assert.equal(values.at(-1).direction, GradientDirection.Bottom);
+  assert.equal(values.at(-1).direction, GradientDirection.Top);
   screenOverride = { id: 0, rotation: 0, width: 1264, height: 1848 };
   event('change', 0); tick();
-  assert.equal(values.at(-1).direction, GradientDirection.Right);
+  assert.equal(values.at(-1).direction, GradientDirection.Left);
   // On reopening, mode and rotation can precede the inner screen bounds.
   displayMode = 1;
   event('foldDisplayModeChange', 1); tick();
   screenOverride = { id: 0, rotation: 3, width: 1264, height: 1848 };
   event('change', 0); tick();
-  assert.equal(values.at(-1).direction, GradientDirection.Right);
+  assert.equal(values.at(-1).direction, GradientDirection.Left);
   screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 };
   event('change', 0); tick();
   assert.equal(values.at(-1).direction, GradientDirection.Right);
