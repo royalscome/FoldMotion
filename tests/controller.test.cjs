@@ -6,13 +6,16 @@ const Module = require('node:module');
 const ts = require('typescript');
 const { test } = require('node:test');
 let now = 1000, reduced = false, foldable = true, rotation = 0, failMode = false;
+let screenOverride, displayMode = 1;
+let creaseRegion = { displayId: 0, creaseRects: [{ left: 596, top: 0, width: 8, height: 1800 }] };
 const accessibilityCallbacks = new Set(), applicationCallbacks = new Set();
 const listeners = new Map(), frames = [], values = [];
 global.GradientDirection = { Right: 0, Bottom: 1, Left: 2, Top: 3 };
 const display = {
   isFoldable: () => foldable,
-  getDefaultDisplaySync: () => ({ rotation }),
-  getCurrentFoldCreaseRegion: () => ({ creaseRects: [{ width: 8, height: 1800 }] }),
+  getDefaultDisplaySync: () => screenOverride ?? ({ id: 0, rotation, width: rotation % 2 ? 1800 : 1200, height: rotation % 2 ? 1200 : 1800 }),
+  getFoldDisplayMode: () => displayMode,
+  getCurrentFoldCreaseRegion: () => creaseRegion,
   on: (type, callback) => {
     if (failMode && type === 'foldDisplayModeChange') throw new Error('unsupported');
     if (!listeners.has(type)) listeners.set(type, new Set());
@@ -103,4 +106,42 @@ test('controller lifecycle, paused motion and independent scopes', () => {
   const secondValues = []; second.onFrame = radius => secondValues.push(radius); move();
   assert.ok(secondValues.at(-1) > 0); second.close(); tick();
   assert.equal(listeners.size, 0); assert.equal(applicationCallbacks.size, 0); assert.equal(accessibilityCallbacks.size, 0);
+});
+
+test('inner and cover screens keep the same gradient through staggered display events', () => {
+  screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 };
+  creaseRegion = { displayId: 0, creaseRects: [{ left: 0, top: 1194, width: 1828, height: 196 }] };
+  displayMode = 1;
+  controller.start(ui, true); move();
+  for (let i = 0; i < 40; i++) tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Right);
+  const held = values.at(-1).radius;
+  // Rotation arrives before the new panel dimensions and mode.
+  screenOverride = { id: 0, rotation: 0, width: 2584, height: 1828 };
+  event('change', 0); tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Right, 'a partial handoff is not a physical rotation');
+  screenOverride = { id: 0, rotation: 0, width: 1264, height: 1848 };
+  displayMode = 2;
+  event('foldDisplayModeChange', 2); event('change', 0); tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Right, 'inner crease coordinates must not rotate the cover effect');
+  assert.equal(values.at(-1).radius, held);
+  // An ordinary rotation on the cover still changes the visual direction.
+  screenOverride = { id: 0, rotation: 1, width: 1848, height: 1264 };
+  event('change', 0); tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Bottom);
+  screenOverride = { id: 0, rotation: 0, width: 1264, height: 1848 };
+  event('change', 0); tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Right);
+  // On reopening, mode and rotation can precede the inner screen bounds.
+  displayMode = 1;
+  event('foldDisplayModeChange', 1); tick();
+  screenOverride = { id: 0, rotation: 3, width: 1264, height: 1848 };
+  event('change', 0); tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Right);
+  screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 };
+  event('change', 0); tick();
+  assert.equal(values.at(-1).direction, GradientDirection.Right);
+  assert.equal(values.at(-1).radius, held);
+  assert.equal(frames.length, 0);
+  controller.close(); tick();
 });

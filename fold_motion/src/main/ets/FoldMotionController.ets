@@ -4,6 +4,7 @@ import { common, ApplicationStateChangeCallback } from '@kit.AbilityKit';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { FoldMotionModel } from './FoldMotionModel';
+import { FoldMotionCrease, FoldMotionDirectionModel } from './FoldMotionDirectionModel';
 
 class FoldMotionFrameCallback extends FrameCallback {
   private readonly action: () => void;
@@ -16,6 +17,7 @@ class FoldMotionFrameCallback extends FrameCallback {
 export class FoldMotionController {
   onFrame: (radius: number, direction: GradientDirection) => void = (): void => {};
   private readonly motion: FoldMotionModel = new FoldMotionModel();
+  private readonly orientation: FoldMotionDirectionModel = new FoldMotionDirectionModel();
   private context: UIContext | undefined = undefined;
   private applicationContext: common.ApplicationContext | undefined = undefined;
   private foreground: boolean = true;
@@ -31,6 +33,7 @@ export class FoldMotionController {
   private lastRadius: number = 0;
   private lastDirection: GradientDirection = GradientDirection.Right;
   private lastDiagnosticAt: number = 0;
+  private lastDisplayDiagnostic: string = '';
   private readonly anglesChanged = (angles: number[]): void => {
     if (!this.enabled || !this.foreground || this.reducedMotion) { return; }
     const now: number = this.now();
@@ -63,6 +66,8 @@ export class FoldMotionController {
   start(context: UIContext, enabled: boolean): void {
     // Reattachment must release callbacks and pending frames from the old host.
     if (this.context !== undefined) { this.close(); }
+    this.orientation.reset();
+    this.lastDisplayDiagnostic = '';
     this.context = context;
     this.enabled = enabled;
     this.foreground = true;
@@ -138,13 +143,25 @@ export class FoldMotionController {
   private updateDirection(): void {
     try {
       const screen: display.Display = display.getDefaultDisplaySync();
-      const creases: display.Rect[] = display.getCurrentFoldCreaseRegion()?.creaseRects ?? [];
+      let mode: number = 0;
+      try { mode = display.getFoldDisplayMode(); } catch (_error) {}
+      let region: display.FoldCreaseRegion | undefined = undefined;
+      try { region = display.getCurrentFoldCreaseRegion(); } catch (_error) {}
+      const creases: display.Rect[] = region?.creaseRects ?? [];
       const crease: display.Rect | undefined = creases[Math.min(this.motion.hinge, creases.length - 1)];
-      const horizontal: boolean = crease !== undefined && crease.width > crease.height;
-      const turn: number = FoldMotionModel.gradientQuarterTurns(horizontal, screen.rotation);
+      const physicalCrease: FoldMotionCrease | undefined = crease !== undefined && region !== undefined ? {
+        displayId: region.displayId, left: crease.left, top: crease.top, width: crease.width, height: crease.height
+      } : undefined;
+      const turn: number = this.orientation.resolve({ id: screen.id, mode, width: screen.width,
+        height: screen.height, rotation: screen.rotation }, physicalCrease);
       const directions: GradientDirection[] = [GradientDirection.Right, GradientDirection.Bottom,
         GradientDirection.Left, GradientDirection.Top];
       this.direction = directions[turn];
+      const diagnostic: string = `${screen.id}:${mode}:${screen.width}x${screen.height}:${screen.rotation}:${turn}`;
+      if (diagnostic !== this.lastDisplayDiagnostic) {
+        this.lastDisplayDiagnostic = diagnostic;
+        hilog.info(0xD004201, 'FoldMotionModel', 'direction display:mode:size:rotation:turn=%{public}s', diagnostic);
+      }
     } catch (_error) {}
   }
 
