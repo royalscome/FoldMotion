@@ -22,5 +22,3 @@ Module._extensions['.ets'] = (module, filename) => module._compile(ts.transpileM
 }).outputText, filename);
 require('../fold_motion/src/test/FoldMotionModel.test.ets').default();
 require('../fold_motion/src/test/FoldMotionDirectionModel.test.ets').default();
-
-require('../fold_motion/src/test/FoldMotionGeometry.test.ets').default();

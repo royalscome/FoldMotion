@@ -62,12 +62,13 @@ def verify_archive():
                     'src/main/ets/FoldMotionController.d.ets',
                     'src/main/ets/FoldMotionDirectionModel.d.ets',
                     'src/main/ets/FoldMotionModel.d.ets',
-                    'src/main/ets/FoldMotionGeometry.d.ets',
-                    'src/main/ets/FoldMotionCapture.d.ets',
-                    'src/main/ets/FoldMotionSurface.d.ets', 'oh-package.json5']
+                    'oh-package.json5']
         for name in required:
             if f'package/{name}' not in names:
                 raise RuntimeError(f'HAR missing {name}')
+        for removed in ['FoldMotionCapture', 'FoldMotionGeometry', 'FoldMotionSurface']:
+            if any(removed in name for name in names):
+                raise RuntimeError(f'HAR contains removed snapshot code: {removed}')
         license_text = archive.extractfile('package/LICENSE').read()
         if license_text != (ROOT / 'LICENSE').read_bytes():
             raise RuntimeError('HAR license differs from root LICENSE')

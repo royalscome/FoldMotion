@@ -188,7 +188,7 @@ export class FoldMotionController {
         this.lastDirection = this.direction;
         this.onFrame(radius, this.direction);
       }
-      if (this.motion.needsFrame(now)) { this.requestFrame(); }
+      // A new angle or display event schedules the next frame. There is no timed continuation.
     }));
   }
 }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 — 2026-09-12
+
+- Keep content flat and live: remove the snapshot mesh, perspective rendering and associated image lifecycle code.
+- Retain `perspectiveStrength` and `contentRevision` as deprecated no-op props for source compatibility.
+- Present the latest hinge angle on the next frame without time-based interpolation or trailing animation.
+- Honor endpoint samples even within the jitter threshold, including fast reopening.
+- Soften the initial inner-display blur and progressively shrink cover blur coverage during closure.
+- Keep inner/cover orientation handling, independent scopes, reduced motion and lifecycle cleanup.
+- Replace obsolete snapshot tests with fast/slow equivalence, endpoint, cover-coverage and live-content regressions.
+
 ## 1.1.0 — 2026-09-12
 
 - Add independent, staged blur, regional shade and local perspective channels driven by hinge angle.

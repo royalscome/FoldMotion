@@ -13,7 +13,6 @@ export class FoldMotionModel {
   private angles: number[] = [];
   private sampleAt: number = 0;
   private movedAt: number = -1;
-  private frameAt: number = 0;
   private target: FoldMotionState = FoldMotionModel.profile(180, false);
   private cover: boolean = false;
   private angle: number = 180;
@@ -33,10 +32,11 @@ export class FoldMotionModel {
     const valid: boolean = Number.isFinite(angle) && angle >= 0 && angle <= 180;
     const distance: number = valid ? (180 - angle) / 90 : 0;
     const endpoint: boolean = !valid || angle <= 2 || angle >= 178;
-    // Cover handoff happens well before the physical endpoint. Keep every remaining
-    // angle responsive, with the final detail recovery concentrated near closure.
-    const blur: number = cover ? 0.6 * FoldMotionModel.smooth(2, 20, angle) +
-      0.4 * FoldMotionModel.smooth(20, 75, angle) : FoldMotionModel.smooth(2 / 90, 0.24, distance);
+    const coverProgress: number = Math.max(0, Math.min(1, (angle - 2) / 73));
+    // Cover recovery changes both radius and coverage throughout the visible closure.
+    // The inner curve starts softly, avoiding a large blur jump on the first few degrees.
+    const blur: number = cover ? coverProgress * coverProgress :
+      FoldMotionModel.smooth(2 / 90, 0.6, distance);
     return {
       radius: endpoint ? 0 : FoldMotionModel.maximumRadius * blur,
       shade: endpoint ? 0 : cover ? FoldMotionModel.smooth(4, 75, angle) :
@@ -49,7 +49,7 @@ export class FoldMotionModel {
 
   reset(): void {
     this.angles = [];
-    this.sampleAt = this.frameAt = 0;
+    this.sampleAt = 0;
     this.movedAt = -1;
     this.radius = this.shade = this.depth = this.hinge = this.sample = 0;
     this.angle = this.cover ? 0 : 180;
@@ -77,7 +77,7 @@ export class FoldMotionModel {
         this.hinge = Math.min(this.hinge, angles.length - 1);
         this.angle = angles[this.hinge]; this.sample += 1;
         this.target = FoldMotionModel.profile(this.angle, this.cover);
-        this.movedAt = now; this.frameAt = 0;
+        this.movedAt = now;
         return true;
       }
       return false;
@@ -89,7 +89,10 @@ export class FoldMotionModel {
       if (delta > movement) { movement = delta; hinge = index; }
     });
     // Accumulate slow movement while ignoring jitter. Never dismiss a stationary hinge.
-    if (movement < 0.45) { return false; }
+    const nextAngle: number = angles[hinge];
+    const endpointChanged: boolean = (nextAngle <= 2 || nextAngle >= 178) !==
+      (this.angles[hinge] <= 2 || this.angles[hinge] >= 178);
+    if (movement < 0.45 && !endpointChanged) { return false; }
     this.hinge = hinge; this.angle = angles[hinge]; this.sample += 1;
     this.target = FoldMotionModel.profile(this.angle, this.cover);
     this.angles = angles.slice(); this.sampleAt = this.movedAt = now;
@@ -100,20 +103,20 @@ export class FoldMotionModel {
     return this.movedAt >= 0 && now >= this.movedAt && now - this.movedAt <= 650;
   }
 
-  private follow(value: number, target: number, elapsed: number, attack: number, release: number,
-    threshold: number): number {
-    const next: number = value + (target - value) * (1 - Math.exp(-elapsed / (target > value ? attack : release)));
-    return Math.abs(next - target) < threshold ? target : next;
-  }
-
+  /** Latch the latest sample on the next presentation frame; elapsed time adds no animation. */
   advance(now: number): number {
     if (this.movedAt < 0 || !Number.isFinite(now)) { return this.radius; }
-    const elapsed: number = this.frameAt > 0 ? Math.max(1, Math.min(64, now - this.frameAt)) : 16;
-    this.frameAt = now;
-    this.radius = this.follow(this.radius, this.target.radius, elapsed, 32, 72, 0.025);
-    this.shade = this.follow(this.shade, this.target.shade, elapsed, 54, 48, 0.0005);
-    this.depth = this.follow(this.depth, this.target.depth, elapsed, 42, 58, 0.0005);
+    this.radius = this.target.radius;
+    this.shade = this.target.shade;
+    this.depth = this.target.depth;
     return this.radius;
+  }
+
+  /** Fraction of the surface affected from the active edge. Cover clarity advances across the page. */
+  static blurSpan(radius: number, cover: boolean): number {
+    if (!cover) { return 0.58; }
+    const fraction: number = Number.isFinite(radius) ? Math.max(0, Math.min(1, radius / FoldMotionModel.maximumRadius)) : 0;
+    return 0.94 * Math.sqrt(fraction);
   }
 
   needsFrame(_now: number): boolean {

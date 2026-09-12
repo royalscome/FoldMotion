@@ -11,13 +11,12 @@ struct Index {
   @State private previewCover: boolean = false;
   @State private previewAngle: number = 150;
   @State private shade: number = 0;
-  @State private depth: number = 0;
   private readonly controller: FoldMotionController = new FoldMotionController();
 
   aboutToAppear(): void {
     this.controller.onVisualFrame = (state: FoldMotionState): void => {
       this.intensity = state.radius / FoldMotionModel.maximumRadius;
-      this.shade = state.shade; this.depth = state.depth;
+      this.shade = state.shade;
     };
     this.controller.start(this.getUIContext(), this.effectOn);
   }
@@ -54,7 +53,7 @@ struct Index {
           Text('让界面，跟随开合。').fontSize(18).fontColor('#607065')
         }.width('100%').alignItems(HorizontalAlign.Start).margin({ top: 20, bottom: 8 })
 
-        Text('慢慢开合，观察虚化、遮暗与透视依次变化。停在中途，效果也会留下。普通设备可打开角度预览。')
+        Text('慢慢开合，虚化和遮暗紧跟角度。停住即保持，展开即清晰。普通设备可打开角度预览。')
           .fontSize(14).fontColor('#607065').lineHeight(24).width('100%')
 
         Column({ space: 18 }) {
@@ -113,7 +112,7 @@ struct Index {
 
         FoldMotion({ effectEnabled: this.effectOn && !this.fullPage, maxBlurRadius: this.strength,
           manualAngle: this.previewValue(), manualCover: this.previewCover }) {
-          this.card('随角度，轻轻变化', '活动侧先虚化，再压缩、变暗；稳定的一侧保留细节。方向跟随真实折痕与屏幕旋转。', '#315B49')
+          this.card('随角度，轻轻变化', '内容始终保持平整。活动侧虚化并渐变遮暗，稳定的一侧保持清晰。', '#315B49')
         }
         FoldMotion({ effectEnabled: this.effectOn && !this.fullPage, maxBlurRadius: this.strength,
           manualAngle: this.previewValue(), manualCover: this.previewCover,
@@ -125,7 +124,7 @@ struct Index {
           Circle().width(14).height(14).fill('#315B49').opacity(1 - this.intensity * 0.7)
           Column({ space: 5 }) {
             Text('自定义控制器').fontSize(15).fontColor('#213C31')
-            Text(`虚化 ${Math.round(this.intensity * 100)}% · 遮暗 ${Math.round(this.shade * 100)}% · 透视 ${Math.round(this.depth * 100)}%`).fontSize(12).fontColor('#718176')
+            Text(`虚化 ${Math.round(this.intensity * 100)}% · 遮暗 ${Math.round(this.shade * 100)}%`).fontSize(12).fontColor('#718176')
           }.alignItems(HorizontalAlign.Start).layoutWeight(1)
           Text(`${Math.round(this.intensity * 100)}%`).fontSize(18).fontColor('#315B49')
         }.width('100%').padding(8)

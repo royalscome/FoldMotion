@@ -1,6 +1,6 @@
 {
   "name": "fold-motion-dev",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "license": "Unlicense",
   "description": "Development checks for FoldMotion, an ArkUI fold-motion HAR.",

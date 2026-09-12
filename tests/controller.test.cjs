@@ -152,7 +152,7 @@ test('visual callbacks continue while blur is saturated, then reset all channels
   const visual = []; const c = new FoldMotionController();
   screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 }; displayMode = 1;
   c.onVisualFrame = (state, direction) => visual.push({ ...state, direction });
-  c.start(ui, true); emit([180]); now += 20; emit([150]);
+  c.start(ui, true); emit([180]); now += 20; emit([120]);
   for (let i = 0; i < 60; i++) tick();
   const before = visual.at(-1);
   now += 20; emit([90]);
@@ -183,4 +183,37 @@ test('manual input respects lifecycle and reduced motion without sensor subscrip
   applicationCallbacks.forEach(cb => cb.onApplicationForeground()); assert.ok(visual.at(-1).radius > 0);
   c.setManualAngle(undefined); assert.equal(listeners.size, 3); assert.equal(visual.at(-1).radius, 0);
   c.close(); tick();
+});
+
+
+test('coalesces rapid hinge updates to the latest angle with no animation tail', () => {
+  const visual = []; const c = new FoldMotionController();
+  screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 }; displayMode = 1;
+  c.onVisualFrame = state => visual.push(state);
+  c.start(ui, true); emit([180]); now += 10; emit([90]); tick();
+  assert.ok(visual.at(-1).radius > 0);
+  assert.equal(frames.length, 0, 'no time-driven continuation after an angle is rendered');
+  for (const angle of [100, 125, 160, 179]) { now++; emit([angle]); }
+  assert.equal(frames.length, 1, 'pending frame presents only the latest sample');
+  tick(); assert.equal(visual.at(-1).angle, 179);
+  assert.equal(visual.at(-1).radius + visual.at(-1).shade + visual.at(-1).depth, 0);
+  assert.equal(frames.length, 0);
+  const count = visual.length; now += 2000; tick();
+  assert.equal(visual.length, count, 'opening is complete, so no later frame can resume the effect');
+  c.close(); tick();
+});
+
+test('cover handoff continues to reveal content on every sampled angle', () => {
+  const visual = []; const c = new FoldMotionController();
+  screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 }; displayMode = 1;
+  c.onVisualFrame = state => visual.push(state);
+  c.start(ui, true); emit([180]); now += 10; emit([70]); tick();
+  screenOverride = { id: 0, rotation: 0, width: 1264, height: 1848 }; displayMode = 2;
+  event('foldDisplayModeChange', 2); tick();
+  const start = visual.at(-1); assert.equal(start.cover, true);
+  now += 10; emit([40]); tick();
+  assert.ok(visual.at(-1).radius < start.radius * 0.4);
+  now += 10; emit([20]); tick(); assert.ok(visual.at(-1).radius < 2);
+  now += 10; emit([1.9]); tick(); assert.equal(visual.at(-1).radius, 0);
+  assert.equal(frames.length, 0); c.close(); tick();
 });
