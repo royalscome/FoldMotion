@@ -61,7 +61,10 @@ def verify_archive():
                     'src/main/ets/FoldMotion.d.ets',
                     'src/main/ets/FoldMotionController.d.ets',
                     'src/main/ets/FoldMotionDirectionModel.d.ets',
-                    'src/main/ets/FoldMotionModel.d.ets', 'oh-package.json5']
+                    'src/main/ets/FoldMotionModel.d.ets',
+                    'src/main/ets/FoldMotionGeometry.d.ets',
+                    'src/main/ets/FoldMotionCapture.d.ets',
+                    'src/main/ets/FoldMotionSurface.d.ets', 'oh-package.json5']
         for name in required:
             if f'package/{name}' not in names:
                 raise RuntimeError(f'HAR missing {name}')

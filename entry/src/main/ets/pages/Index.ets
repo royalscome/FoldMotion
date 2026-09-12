@@ -1,22 +1,34 @@
-import { FoldMotion, FoldMotionController, FoldMotionModel } from 'fold-motion';
+import { FoldMotion, FoldMotionController, FoldMotionModel, FoldMotionState } from 'fold-motion';
 
 @Entry
 @Component
 struct Index {
   @State private effectOn: boolean = true;
-  @State private strength: number = 28;
+  @State private strength: number = 42;
   @State private fullPage: boolean = false;
   @State private intensity: number = 0;
+  @State private previewOn: boolean = false;
+  @State private previewCover: boolean = false;
+  @State private previewAngle: number = 150;
+  @State private shade: number = 0;
+  @State private depth: number = 0;
   private readonly controller: FoldMotionController = new FoldMotionController();
 
   aboutToAppear(): void {
-    this.controller.onFrame = (radius: number): void => {
-      this.intensity = radius / FoldMotionModel.maximumRadius;
+    this.controller.onVisualFrame = (state: FoldMotionState): void => {
+      this.intensity = state.radius / FoldMotionModel.maximumRadius;
+      this.shade = state.shade; this.depth = state.depth;
     };
     this.controller.start(this.getUIContext(), this.effectOn);
   }
 
   aboutToDisappear(): void { this.controller.close(); }
+
+  private previewValue(): number | undefined { return this.previewOn ? this.previewAngle : undefined; }
+
+  private updatePreview(): void {
+    this.controller.setManualAngle(this.previewValue(), this.previewCover);
+  }
 
   @Builder
   private card(title: string, subtitle: string, color: string) {
@@ -42,12 +54,12 @@ struct Index {
           Text('让界面，跟随开合。').fontSize(18).fontColor('#607065')
         }.width('100%').alignItems(HorizontalAlign.Start).margin({ top: 20, bottom: 8 })
 
-        Text('慢慢折叠或展开设备，停在中途观察效果保持。普通设备会保持清晰。')
+        Text('慢慢开合，观察虚化、遮暗与透视依次变化。停在中途，效果也会留下。普通设备可打开角度预览。')
           .fontSize(14).fontColor('#607065').lineHeight(24).width('100%')
 
         Column({ space: 18 }) {
           Row() {
-            Text('跟随铰链角度').fontSize(16).fontColor('#213C31')
+            Text('启用动效').fontSize(16).fontColor('#213C31')
             Blank()
             Toggle({ type: ToggleType.Switch, isOn: this.effectOn })
               .selectedColor('#315B49')
@@ -56,6 +68,27 @@ struct Index {
                 this.controller.setEnabled(value);
               })
           }.width('100%')
+          Row() {
+            Text('手动角度预览').fontSize(16).fontColor('#213C31')
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: this.previewOn }).selectedColor('#315B49')
+              .onChange((value: boolean): void => { this.previewOn = value; this.updatePreview(); })
+          }.width('100%')
+          if (this.previewOn) {
+            Row({ space: 10 }) {
+              Button(this.previewCover ? '外屏 · 右侧变化' : '内屏 · 左侧变化')
+                .height(38).backgroundColor('#E8EBE4').fontColor('#315B49')
+                .onClick((): void => {
+                  this.previewCover = !this.previewCover;
+                  this.previewAngle = 180 - this.previewAngle; this.updatePreview();
+                })
+              Blank()
+              Text(`${Math.round(this.previewAngle)}°`).fontSize(18).fontColor('#315B49')
+            }.width('100%')
+            Slider({ value: this.previewAngle, min: 0, max: 180, step: 1 })
+              .selectedColor('#315B49').blockColor('#315B49')
+              .onChange((value: number): void => { this.previewAngle = value; this.updatePreview(); })
+          }
           Row() {
             Text('模糊强度').fontSize(14).fontColor('#607065')
             Blank()
@@ -78,10 +111,12 @@ struct Index {
           }.width('100%')
         }.width('100%').padding(22).backgroundColor('#FFFFFF').borderRadius(24)
 
-        FoldMotion({ effectEnabled: this.effectOn && !this.fullPage, maxBlurRadius: this.strength }) {
-          this.card('随角度，轻轻变化', '默认方向随折痕与屏幕旋转，局部内容模糊，另一侧保持清晰。', '#315B49')
+        FoldMotion({ effectEnabled: this.effectOn && !this.fullPage, maxBlurRadius: this.strength,
+          manualAngle: this.previewValue(), manualCover: this.previewCover }) {
+          this.card('随角度，轻轻变化', '活动侧先虚化，再压缩、变暗；稳定的一侧保留细节。方向跟随真实折痕与屏幕旋转。', '#315B49')
         }
         FoldMotion({ effectEnabled: this.effectOn && !this.fullPage, maxBlurRadius: this.strength,
+          manualAngle: this.previewValue(), manualCover: this.previewCover,
           blurDirection: GradientDirection.Bottom }) {
           this.card('停下来，也留在当下', '这张卡片固定使用竖向渐变。多个实例可独立设置、独立启停。', '#8B7158')
         }
@@ -90,7 +125,7 @@ struct Index {
           Circle().width(14).height(14).fill('#315B49').opacity(1 - this.intensity * 0.7)
           Column({ space: 5 }) {
             Text('自定义控制器').fontSize(15).fontColor('#213C31')
-            Text('同一动效模型，也能驱动透明度等自定义效果。').fontSize(12).fontColor('#718176')
+            Text(`虚化 ${Math.round(this.intensity * 100)}% · 遮暗 ${Math.round(this.shade * 100)}% · 透视 ${Math.round(this.depth * 100)}%`).fontSize(12).fontColor('#718176')
           }.alignItems(HorizontalAlign.Start).layoutWeight(1)
           Text(`${Math.round(this.intensity * 100)}%`).fontSize(18).fontColor('#315B49')
         }.width('100%').padding(8)
@@ -102,6 +137,7 @@ struct Index {
   build() {
     Stack() {
       FoldMotion({ effectEnabled: this.effectOn && this.fullPage, maxBlurRadius: this.strength,
+          manualAngle: this.previewValue(), manualCover: this.previewCover,
         content: (): void => { this.pageContent(); } })
         .width('100%').height('100%')
     }.width('100%').height('100%').backgroundColor('#F6F3EC')

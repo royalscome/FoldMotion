@@ -142,6 +142,45 @@ test('inner and cover use opposite blur edges without quarter-turns during hando
   event('change', 0); tick();
   assert.equal(values.at(-1).direction, GradientDirection.Right);
   assert.equal(values.at(-1).radius, held);
+  for (let i = 0; i < 60; i++) tick();
   assert.equal(frames.length, 0);
   controller.close(); tick();
+});
+
+
+test('visual callbacks continue while blur is saturated, then reset all channels', () => {
+  const visual = []; const c = new FoldMotionController();
+  screenOverride = { id: 0, rotation: 3, width: 2584, height: 1828 }; displayMode = 1;
+  c.onVisualFrame = (state, direction) => visual.push({ ...state, direction });
+  c.start(ui, true); emit([180]); now += 20; emit([150]);
+  for (let i = 0; i < 60; i++) tick();
+  const before = visual.at(-1);
+  now += 20; emit([90]);
+  for (let i = 0; i < 60; i++) tick();
+  assert.equal(visual.at(-1).radius, before.radius);
+  assert.ok(visual.at(-1).shade > before.shade);
+  assert.ok(visual.at(-1).depth > before.depth);
+  c.close();
+  assert.equal(visual.at(-1).radius + visual.at(-1).shade + visual.at(-1).depth, 0);
+  tick(); assert.equal(frames.length, 0);
+});
+
+test('manual input respects lifecycle and reduced motion without sensor subscriptions', () => {
+  const visual = []; const c = new FoldMotionController();
+  c.onVisualFrame = state => visual.push(state);
+  c.setManualAngle(45, true); c.start(ui, true);
+  assert.equal(listeners.size, 0); assert.ok(visual.at(-1).shade > 0);
+  const count = visual.length;
+  c.setManualAngle(46, true);
+  assert.equal(visual.length, count + 1, 'manual samples must not emit a transient clear frame');
+  assert.ok(visual.at(-1).radius > 0);
+  reduced = true; accessibilityCallbacks.forEach(cb => cb(true));
+  assert.equal(visual.at(-1).radius + visual.at(-1).shade + visual.at(-1).depth, 0);
+  c.setManualAngle(60, true); assert.equal(visual.at(-1).radius, 0);
+  reduced = false; accessibilityCallbacks.forEach(cb => cb(false));
+  assert.ok(visual.at(-1).radius > 0);
+  applicationCallbacks.forEach(cb => cb.onApplicationBackground()); assert.equal(visual.at(-1).radius, 0);
+  applicationCallbacks.forEach(cb => cb.onApplicationForeground()); assert.ok(visual.at(-1).radius > 0);
+  c.setManualAngle(undefined); assert.equal(listeners.size, 3); assert.equal(visual.at(-1).radius, 0);
+  c.close(); tick();
 });

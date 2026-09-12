@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 — 2026-09-12
+
+- Add independent, staged blur, regional shade and local perspective channels driven by hinge angle.
+- Keep cover channels responsive throughout the remaining closure after display handoff.
+- Keep the stable region undeformed and clear; preserve the inner and cover display directions.
+- Hold all channels at stationary angles and stop scheduling frames after settling.
+- Render perspective with a bounded in-memory snapshot mesh; discard stale images after resize, handoff, touch and teardown.
+- Add `onVisualFrame`, `FoldMotionState`, external angle input, shade/perspective controls and content invalidation.
+- Add manual angle and panel previews to the demo, including separate channel readouts.
+- Raise the default blur radius from 28 to 42; set shade and perspective strength to zero for a blur-only scope.
+- Expand regression coverage for channel timing, mesh bounds, manual input and asynchronous capture cleanup.
+
 ## 1.0.1 — 2026-09-11
 
 - Keep the gradient axis stable during inner/cover display handoffs, including staggered display notifications.

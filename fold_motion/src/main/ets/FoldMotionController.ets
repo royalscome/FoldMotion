@@ -3,7 +3,7 @@ import { accessibility } from '@kit.AccessibilityKit';
 import { common, ApplicationStateChangeCallback } from '@kit.AbilityKit';
 import { systemDateTime } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { FoldMotionModel } from './FoldMotionModel';
+import { FoldMotionModel, FoldMotionState } from './FoldMotionModel';
 import { FoldMotionCrease, FoldMotionDirectionModel } from './FoldMotionDirectionModel';
 
 class FoldMotionFrameCallback extends FrameCallback {
@@ -16,6 +16,7 @@ class FoldMotionFrameCallback extends FrameCallback {
 /** Owns a scoped fold effect; it has no knowledge of application routes or data. */
 export class FoldMotionController {
   onFrame: (radius: number, direction: GradientDirection) => void = (): void => {};
+  onVisualFrame: (state: FoldMotionState, direction: GradientDirection) => void = (): void => {};
   private readonly motion: FoldMotionModel = new FoldMotionModel();
   private readonly orientation: FoldMotionDirectionModel = new FoldMotionDirectionModel();
   private context: UIContext | undefined = undefined;
@@ -32,6 +33,9 @@ export class FoldMotionController {
   private direction: GradientDirection = GradientDirection.Right;
   private lastRadius: number = 0;
   private lastDirection: GradientDirection = GradientDirection.Right;
+  private manualAngle: number | undefined = undefined;
+  private manualCover: boolean = false;
+  private manualSample: number = 0;
   private readonly anglesChanged = (angles: number[]): void => {
     if (!this.enabled || !this.foreground || this.reducedMotion) { return; }
     const now: number = this.now();
@@ -81,6 +85,15 @@ export class FoldMotionController {
     this.enabled = enabled; this.synchronize();
   }
 
+  /** External angle sources use the same lifecycle and reduced-motion gates. */
+  setManualAngle(angle: number | undefined, cover: boolean = false): void {
+    if (angle === this.manualAngle && cover === this.manualCover) { return; }
+    const sourceChanged: boolean = (angle === undefined) !== (this.manualAngle === undefined);
+    this.manualAngle = angle; this.manualCover = cover; this.manualSample += 1;
+    if (sourceChanged) { this.stopObserving(); }
+    if (sourceChanged || angle !== undefined) { this.synchronize(); }
+  }
+
   close(): void {
     this.enabled = false; this.synchronize();
     if (this.observingAccessibility) {
@@ -97,6 +110,13 @@ export class FoldMotionController {
   private synchronize(): void {
     if (!this.enabled || !this.foreground || this.reducedMotion || this.context === undefined) {
       this.stopObserving(); return;
+    }
+    if (this.manualAngle !== undefined) {
+      const state: FoldMotionState = FoldMotionModel.profile(this.manualAngle, this.manualCover);
+      state.sample = this.manualSample;
+      this.direction = this.manualCover ? GradientDirection.Left : GradientDirection.Right;
+      this.onFrame(state.radius, this.direction); this.onVisualFrame(state, this.direction);
+      return;
     }
     if (this.observingAngles) { return; }
     try {
@@ -125,6 +145,7 @@ export class FoldMotionController {
     this.generation += 1; this.framePending = false;
     this.motion.reset(); this.lastRadius = 0;
     this.onFrame(0, this.direction);
+    this.onVisualFrame(this.motion.state(), this.direction);
   }
 
   private now(): number {
@@ -148,6 +169,7 @@ export class FoldMotionController {
       const directions: GradientDirection[] = [GradientDirection.Right, GradientDirection.Bottom,
         GradientDirection.Left, GradientDirection.Top];
       this.direction = directions[turn];
+      this.motion.setCover(this.orientation.isCover());
     } catch (_error) {}
   }
 
@@ -160,6 +182,7 @@ export class FoldMotionController {
       this.framePending = false;
       const now: number = this.now();
       const radius: number = this.motion.advance(now);
+      this.onVisualFrame(this.motion.state(), this.direction);
       if (Math.abs(radius - this.lastRadius) > 0.025 || radius === 0 || this.direction !== this.lastDirection) {
         this.lastRadius = radius;
         this.lastDirection = this.direction;

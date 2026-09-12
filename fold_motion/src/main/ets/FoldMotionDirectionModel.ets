@@ -36,6 +36,8 @@ export class FoldMotionDirectionModel {
   private cover: boolean = false;
   private visualTurn: number = 0;
 
+  isCover(): boolean { return this.cover; }
+
   reset(): void {
     this.bases = []; this.panels = []; this.turn = this.visualTurn = 0; this.cover = false;
   }

@@ -2,20 +2,23 @@
 
 Angle-driven motion for HarmonyOS ArkUI.
 
-鸿蒙折叠屏动效组件。跟随真实铰链角度，让界面局部虚化；展开或合拢到端点恢复清晰，中途停下则保持当前效果。
+鸿蒙折叠屏动效组件。跟随真实铰链角度，让界面局部虚化、变暗并产生透视压缩；展开或合拢到端点恢复清晰，中途停下则保持当前效果。
 
 **Unlicense · 无运行时第三方依赖 · HarmonyOS 6.1.1 / API 24 · ArkUI V1**
 
 ## 能做什么
 
 - 整页、局部卡片和自定义内容共用同一个 `FoldMotion` 容器。
+- 虚化先出现，透视与遮暗随后加强；恢复时先减轻遮暗和形变，再逐步恢复细节。稳定区域保持原位和清晰。
 - 默认渐变方向跟随物理折痕和屏幕旋转，内外屏使用相反的模糊起始边；也可自定义方向、采样点与最大模糊半径。
 - 中途暂停保持效果，稳定后停止请求帧；反向开合连续衔接。
 - 自动处理前后台、可见性、减少动态效果设置和实例释放；多个作用域独立启停。
-- `FoldMotionController` 暴露动效回调，可驱动透明度、蒙版或自己的渲染层。
-- 普通设备保持清晰，不订阅铰链角度。
+- `FoldMotionController` 分别输出虚化、遮暗、透视强度，可驱动自己的渲染层；保留原有半径回调。
+- 普通设备默认保持清晰；通过手动角度输入可预览内外屏效果。
 
-适用于 HarmonyOS 6.1.1 / API 24、Stage 模型和 ArkUI V1；其他 SDK 版本尚未验证。真实开合效果需要支持铰链角度回调的折叠设备，模拟器与普通设备可用于检查布局。组件作用于应用内容，系统内外屏切换由操作系统负责。
+适用于 HarmonyOS 6.1.1 / API 24、Stage 模型和 ArkUI V1；其他 SDK 版本尚未验证。真实开合效果需要支持铰链角度回调的折叠设备，模拟器与普通设备可通过示例的角度预览检查效果。组件作用于应用内容，系统内外屏切换由操作系统负责。
+
+虚化和遮暗作用于实时内容；透视层使用内存快照网格，单张图像不超过约 150 万像素，每个作用域最多保留一张图像、执行一个抓取任务。触摸、切屏、退后台或卸载时清除对应快照；快照不可用时继续显示实时虚化与遮暗。动态内容的刷新和独立 Surface 限制见 [API 文档](fold_motion/README.md#透视层与动态内容)。
 
 ## 快速接入
 
@@ -55,7 +58,7 @@ struct FoldCard {
 
 开发环境：DevEco Studio 6.1.1、HarmonyOS SDK API 24、Node.js 22 和 Python 3.9+。
 
-在 DevEco Studio 中打开项目根目录，完成同步后运行 `entry` 模块。示例包含局部卡片、整页效果切换、强度滑杆和控制器回调。真机运行需要在 IDE 中配置应用签名；命令行构建默认生成未签名 HAP。
+在 DevEco Studio 中打开项目根目录，完成同步后运行 `entry` 模块。示例包含局部卡片、整页效果切换、模糊强度、手动角度与内外屏预览，以及三个独立通道的读数。真机运行需要在 IDE 中配置应用签名；命令行构建默认生成未签名 HAP。
 
 macOS 默认安装路径可直接使用下面的脚本。DevEco Studio 安装在其他位置时，先设置 `DEVECO_STUDIO_HOME` 为包含 `tools/`、`sdk/` 的目录；也可分别设置 `HVIGOR_BINARY`、`OHPM_BINARY`、`DEVECO_SDK_HOME` 和 `JAVA_HOME`。Windows 使用相应环境变量设置方式，并将 `python3` 替换为本机 Python 命令。
 
@@ -73,7 +76,7 @@ python3 scripts/harmony.py demo
 python3 scripts/harmony.py package
 ```
 
-打包产物为 `dist/fold-motion-1.0.1.har` 和 `dist/SHA256SUMS`。接入时可将 HAR 重命名为 `fold_motion.har`。原始构建产物位于 `fold_motion/build/default/outputs/default/fold_motion.har`。
+打包产物为 `dist/fold-motion-1.1.0.har` 和 `dist/SHA256SUMS`。接入时可将 HAR 重命名为 `fold_motion.har`。原始构建产物位于 `fold_motion/build/default/outputs/default/fold_motion.har`。
 
 ## 测试
 
@@ -84,7 +87,7 @@ npm ci --ignore-scripts
 npm test
 ```
 
-测试覆盖角度响应、暂停保持、旋转、前后台、减少动态效果、多实例和异常清理。GitHub Actions 运行同一组 Node 测试。
+测试覆盖分阶段角度响应、暂停保持、旋转、前后台、减少动态效果、多实例、透视网格边界和异步快照清理。GitHub Actions 运行同一组 Node 测试。
 
 安装 SDK 并完成工程依赖安装后，可运行 Hypium 模型测试：
 

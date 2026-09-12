@@ -25,7 +25,7 @@ export default function foldMotionModelTest(): void {
       expect(motion.radius).assertEqual(FoldMotionModel.maximumRadius);
       expect(motion.needsFrame(584)).assertFalse();
       expect(motion.advance(10000)).assertEqual(FoldMotionModel.maximumRadius);
-      motion.accept([140], 10020);
+      motion.accept([170], 10020);
       expect(motion.radius).assertEqual(FoldMotionModel.maximumRadius);
       expect(motion.advance(10036) < FoldMotionModel.maximumRadius).assertTrue();
     });
@@ -73,6 +73,68 @@ export default function foldMotionModelTest(): void {
       expect(motion.needsFrame(150)).assertFalse();
       expect(motion.accept([40], 200)).assertFalse();
       expect(motion.advance(216)).assertEqual(0);
+    });
+    it('stages blur before perspective and shade at both visible endpoints', 0, (): void => {
+      const inner = FoldMotionModel.profile(170, false);
+      const cover = FoldMotionModel.profile(10, true);
+      expect(inner.radius > 0).assertTrue();
+      expect(inner.shade).assertEqual(0);
+      expect(inner.depth > 0 && inner.depth < 0.05).assertTrue();
+      expect(cover.radius > 0 && cover.shade < 0.03 && cover.depth < 0.04).assertTrue();
+      expect(FoldMotionModel.profile(150, false).radius).assertEqual(FoldMotionModel.maximumRadius);
+      expect(FoldMotionModel.profile(150, false).shade < 0.2).assertTrue();
+      expect(FoldMotionModel.profile(90, false).shade).assertEqual(1);
+      expect(FoldMotionModel.profile(NaN, false).radius).assertEqual(0);
+    });
+    it('keeps all cover channels changing from handoff through the remaining closure', 0, (): void => {
+      let previous = FoldMotionModel.profile(70, true);
+      for (const angle of [60, 50, 40, 30, 20, 10, 2]) {
+        const next = FoldMotionModel.profile(angle, true);
+        expect(next.radius < previous.radius).assertTrue();
+        expect(next.shade < previous.shade).assertTrue();
+        expect(next.depth < previous.depth).assertTrue();
+        previous = next;
+      }
+      expect(previous.radius + previous.shade + previous.depth).assertEqual(0);
+    });
+    it('holds all channels without idle frames and clears every endpoint and reset', 0, (): void => {
+      const model = new FoldMotionModel(); model.accept([180], 100); model.accept([100], 120);
+      for (let time = 136; time < 1200; time += 16) { model.advance(time); }
+      const held = model.state();
+      expect(held.radius > 0 && held.shade > 0 && held.depth > 0).assertTrue();
+      expect(model.needsFrame(1200)).assertFalse();
+      model.advance(10000);
+      expect(model.shade).assertEqual(held.shade); expect(model.depth).assertEqual(held.depth);
+      model.accept([180], 10020);
+      for (let time = 10036; time < 11500; time += 16) { model.advance(time); }
+      expect(model.radius + model.shade + model.depth).assertEqual(0);
+      model.reset(); expect(model.state().sample).assertEqual(0);
+    });
+    it('retargets panel channels continuously during a display handoff', 0, (): void => {
+      const model = new FoldMotionModel(); model.accept([180], 100); model.accept([60], 120);
+      for (let time = 136; time < 1200; time += 16) { model.advance(time); }
+      const shade = model.shade; const radius = model.radius;
+      model.setCover(true);
+      expect(model.shade).assertEqual(shade); expect(model.radius).assertEqual(radius);
+      model.advance(1216);
+      expect(model.shade < shade && model.shade > 0).assertTrue();
+      expect(model.state().cover).assertTrue();
+      model.reset(); model.setCover(false);
+      expect(model.radius + model.shade + model.depth).assertEqual(0);
+    });
+    it('settles an active transition after hinge count or clock baseline changes', 0, (): void => {
+      const model = new FoldMotionModel(); model.accept([180, 180], 100);
+      model.accept([180, 100], 120); model.advance(136);
+      expect(model.depth > 0).assertTrue();
+      expect(model.accept([180], 150)).assertTrue();
+      expect(model.hinge).assertEqual(0);
+      for (let time = 166; time < 1200; time += 16) { model.advance(time); }
+      expect(model.radius + model.shade + model.depth).assertEqual(0);
+      model.accept([90], 1300); model.advance(1316);
+      expect(model.accept([180], 100)).assertTrue();
+      for (let time = 116; time < 1200; time += 16) { model.advance(time); }
+      expect(model.radius + model.shade + model.depth).assertEqual(0);
+      expect(model.needsFrame(1200)).assertFalse();
     });
     it('rotates the gradient together with either physical crease orientation', 0, (): void => {
       expect(FoldMotionModel.gradientQuarterTurns(false, 0)).assertEqual(0);
